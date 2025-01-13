@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  
+  <title>Recording of Timing Attack in CTF - Hao Jiang</title>
+  
+    <link rel="shortcut icon" href="/img/favicon.jpg">
+  
+  
+
+  
+
+  
+<link rel="stylesheet" href="/css/var.css">
+
+  
+<link rel="stylesheet" href="/css/main.css">
+
+  
+<link rel="stylesheet" href="/css/typography.css">
+
+  
+<link rel="stylesheet" href="/css/code-highlighting.css">
+
+  
+<link rel="stylesheet" href="/css/components.css">
+
+  
+<link rel="stylesheet" href="/css/nav.css">
+
+  
+<link rel="stylesheet" href="/css/paginator.css">
+
+  
+<link rel="stylesheet" href="/css/footer.css">
+
+  
+<link rel="stylesheet" href="/css/post-list.css">
+
+  
+  
+<link rel="stylesheet" href="/css/rainbow-banner.css">
+
+  
+  
+  
+<link rel="stylesheet" href="/css/toc.css">
+
+  
+  
+  
+  
+  
+<link rel="stylesheet" href="/css/post.css">
+
+  
+  
+  
+  
+  
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+    <body
+        data-color-scheme="auto"
+        data-uppercase-categories="true"
+        
+        data-rainbow-banner="true"
+        data-rainbow-banner-shown="always"
+        data-rainbow-banner-month="6"
+        data-rainbow-banner-colors="#e50000,#ff8d00,#ffee00,#008121,#004cff,#760188"
+        
+        data-config-root="/"
+        
+        data-toc="true"
+        data-toc-max-depth="2"
+        
+        
+    >
+        <nav id="theme-nav">
+    <div class="inner">
+        <a class="title" href="/">deebato&#39;s blog</a>
+        <div class="nav-arrow"></div>
+        <div class="nav-items">
+            <a class="nav-item nav-item-home" href="/">Home</a>
+            
+            
+            <a class="nav-item" href="/archives">Archives</a>
+            
+            
+            
+            <a class="nav-item" href="/friends">Friends</a>
+            
+            
+            
+            <a class="nav-item" href="/about">About</a>
+            
+            
+            
+            <a class="nav-item" href="/tags">Tags</a>
+            
+            
+            
+            <a class="nav-item" href="/categories">Categories</a>
+            
+            
+            
+            <a class="nav-item" href="/something">Something</a>
+            
+            
+            
+            <a class="nav-item nav-item-github nav-item-icon" href="https://github.com/D33BaT0" target="_blank" aria-label="GitHub">&nbsp;</a>
+            
+            
+            
+            <a class="nav-item nav-item-search nav-item-icon" href="/search" target="_blank" aria-label="Search">&nbsp;</a>
+            
+            
+        </div>
+    </div>
+</nav>
+        
+<article class="post">
+    <div class="meta">
+        
+        <div class="categories text-uppercase">
+        
+            <a href="/categories/ctf/">ctf</a>
+        
+        </div>
+        
+
+        
+        <div class="date" id="date">
+            <span>January</span>
+            <span>14,</span>
+            <span>2025</span>
+        </div>
+        
+
+        <h2 class="title">Recording of Timing Attack in CTF</h2>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="content">
+        <p>想象一下，你正在尝试打开一个密码保护的保险箱。传统的方法是尝试破解密码本身，就像硬核数学家一样研究密码算法的数学基础。但是有时候通过倾听保险箱齿轮转动的声音，或者观察开锁所需的时间，你就能推测出密码。这就是<strong>侧信道攻击（Side-Channel Attack）</strong>的精髓所在。</p>
+<p>就像古代伟大的将军善于利用细微的环境变化来洞察敌情一样，侧信道攻击者也在寻找密码系统运行时泄露的各种”蛛丝马迹”。这些信息可能包括：</p>
+<ul>
+<li>⏱️ <strong>执行时间</strong>（Time）：就像听出对方输入密码时按键的间隔；</li>
+<li>⚡ <strong>功耗</strong>（Power consumption）：观察设备运行时的电量消耗波动；</li>
+<li>📡 <strong>电磁辐射</strong>（Electromagnetic radiation）：捕捉设备运行时的电磁波变化；</li>
+<li>……</li>
+</ul>
+<p>本周末笔者在参加两场CTF比赛（SUCTF 2025和UofTCTF 2025）时，遇到了两道关于<strong>时间侧信道攻击</strong>的题目。题目并不困难但是非常有意思，笔者记录且分享一下相关内容。这种攻击方式利用了密码算法实现中的一个基本事实：不同的输入可能会导致程序执行时间的细微差异。这些差异虽然微小，但在统计意义上是可以被检测和利用的。</p>
+<p>接下来，让笔者带领大家深入两个精彩的CTF题目，看看如何在实战中运用时间侧信道攻击：</p>
+<ol>
+<li><strong>🏆 SUCTF 2025: SU_Auth(Crypto, 6 solves, 1st🩸)</strong><ul>
+<li>针对后量子密码学算法CSIDH的时间侧信道攻击,</li>
+<li>CSIDH private key collision.</li>
+</ul>
+</li>
+<li><strong>🔐 UofTCTF 2025: Timed AES(Crypto, 4 solves)</strong><ul>
+<li>针对对称加密算法AES的时间侧信道攻击,</li>
+<li>Sbox Inv：当枚举替代查表时会发生什么.</li>
+</ul>
+</li>
+</ol>
+<h2 id="SUCTF-2025-SU-Auth-Crypto-6-solves"><a href="#SUCTF-2025-SU-Auth-Crypto-6-solves" class="headerlink" title="SUCTF 2025: SU_Auth(Crypto, 6 solves)"></a>SUCTF 2025: SU_Auth(Crypto, 6 solves)</h2><h3 id="Overview"><a href="#Overview" class="headerlink" title="Overview"></a>Overview</h3><p>题目的代码量不大，核心如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">SuAuth</span>(<span class="params">A, priv, LIMIT=<span class="literal">True</span></span>):</span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">any</span>(priv[i] == SUKEY[i] <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(ells))) <span class="keyword">and</span> LIMIT: <span class="keyword">return</span> <span class="string">&quot;🙅SUKEY&quot;</span></span><br><span class="line">    E = EllipticCurve(F, [<span class="number">0</span>, A, <span class="number">0</span>, <span class="number">1</span>, <span class="number">0</span>])</span><br><span class="line">    <span class="keyword">for</span> sgn <span class="keyword">in</span> [<span class="number">1</span>, -<span class="number">1</span>]:</span><br><span class="line">        <span class="keyword">for</span> e, ell <span class="keyword">in</span> <span class="built_in">zip</span>(priv, ells):</span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(sgn * e):</span><br><span class="line">                <span class="keyword">while</span> <span class="keyword">not</span> (P := (p + <span class="number">1</span>) // ell * E.random_element()) <span class="keyword">or</span> P.order() != ell:</span><br><span class="line">                    <span class="keyword">pass</span></span><br><span class="line">                E = E.isogeny_codomain(P)</span><br><span class="line">        E = E.quadratic_twist()</span><br><span class="line">    <span class="keyword">return</span> E.montgomery_model().a2()</span><br><span class="line"></span><br><span class="line">cipher = <span class="keyword">lambda</span> key: AES.new(md5(key.encode()).digest(),AES.MODE_ECB)</span><br><span class="line">SUDOOR = cipher(<span class="built_in">str</span>(SuAuth(<span class="number">0</span>, SUKEY, <span class="number">0</span>))).encrypt(<span class="string">b&quot;./OPEN_THE_FLAG!&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;😜&quot;</span>, SuAuth(<span class="number">0</span>, SUKEY, <span class="number">0</span>)) </span><br><span class="line"></span><br><span class="line"><span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">    AKey = SuAuth(<span class="number">0</span>, literal_eval(<span class="built_in">input</span>(<span class="string">&quot;🔑: &quot;</span>)))</span><br><span class="line">    <span class="keyword">try</span>: subprocess.run(cipher(<span class="built_in">str</span>(AKey)).decrypt(SUDOOR))</span><br><span class="line">    <span class="keyword">except</span>: <span class="keyword">continue</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Analysis"><a href="#Analysis" class="headerlink" title="Analysis"></a>Analysis</h3><p>笔者初见SuAuth函数时，漏洞其实已经非常明显了 🔍 就在函数的第一行：<code>if any(priv[i] == SUKEY[i] for i in range(len(ells))) and LIMIT: return &quot;🙅SUKEY&quot;</code>。这会带来什么后果呢？ 🤔</p>
+<p>CSIDH的效率并不算高 🐢，如果提交的priv中某一位恰好猜中了SUKEY对应位置的值，函数就会直接返回”🙅SUKEY”，而不会执行后续的CSIDH同源操作。这就导致了一个明显的时间差 ⚡：与执行完整的CSIDH group action（涉及46组同源路径组合）相比，提前返回的执行时间会短得多 ⏱️。 基于这个特点，可以逐位（从第0位到最后一位）尝试-3到3的值，当某次执行时间异常短时，就可以认定这个值就是SUKEY在该位置的值。通过最多7*46次交互 🔄，就能完整还原出SUKEY 🎯。类似SQL盲注。</p>
+<p>获得SUKEY后，要成功调用SUDOOR还需要找到一个与SUKEY每个位置都不同的Akey 🔑。一开始我尝试了很多方法去推测群阶 🧮，都没有成功 😅。后来在GPT的提示下得到了<code>6-x for x in SUKEY</code>这个思路 💡，我将其修改为<code>6+x for x in SUKEY</code>后成功找到了等价collision ✨。后来向随缘请教才知道，原来在某篇CSIDH综述中提到[3,3,3,…,3]这个序列可以让它回到起始状态 🔄。有兴趣的读者也可以自行去寻找并且阅读相关文献📖，也给出了对应的证明。</p>
+<h2 id="UofTCTF-2025-Timed-AES-Crypto-4-solves"><a href="#UofTCTF-2025-Timed-AES-Crypto-4-solves" class="headerlink" title="UofTCTF 2025: Timed AES(Crypto, 4 solves)"></a>UofTCTF 2025: Timed AES(Crypto, 4 solves)</h2><h3 id="Overview-1"><a href="#Overview-1" class="headerlink" title="Overview"></a>Overview</h3><p>题目的代码量也不大，核心如下：</p>
+<p>AES.c 其中关键部分为</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"><span class="type">u_int8_t</span> <span class="title function_">doSbox</span><span class="params">(<span class="type">u_int8_t</span> num)</span>&#123;</span><br><span class="line">    <span class="keyword">return</span> sbox[num];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">u_int8_t</span> <span class="title function_">doSboxInv</span><span class="params">(<span class="type">u_int8_t</span> num)</span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">0</span>; i &lt; <span class="number">256</span>; i++)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (sbox[i] == num) <span class="keyword">return</span> i;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">aesBlockDecrypt</span><span class="params">(<span class="type">u_int8_t</span> *key, <span class="type">const</span> <span class="type">u_int8_t</span> *enc, <span class="type">u_int8_t</span> *msg)</span>&#123;</span><br><span class="line">    <span class="type">u_int8_t</span> expandedKey[<span class="number">16</span> * <span class="number">11</span>];</span><br><span class="line">    keyExpand(key, expandedKey);</span><br><span class="line">    <span class="built_in">memcpy</span>(msg, enc, <span class="number">16</span>);</span><br><span class="line"></span><br><span class="line">    addRoundKey(expandedKey + <span class="number">10</span>*<span class="number">16</span>, msg);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">size_t</span> i = <span class="number">9</span>; i &gt; <span class="number">0</span>; i--)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="type">u_int8_t</span> *roundKey  = expandedKey + <span class="number">16</span> * i;</span><br><span class="line">        shiftRowsInv(msg);</span><br><span class="line">        subBytesInv(msg);</span><br><span class="line">        addRoundKey(roundKey, msg);</span><br><span class="line">        mixColumnsInv(msg);</span><br><span class="line">    &#125;</span><br><span class="line">    shiftRowsInv(msg);</span><br><span class="line">    subBytesInv(msg);</span><br><span class="line">    addRoundKey(expandedKey, msg);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>交互即使用flag作为AES的密钥进行加密或者解密操作，其中Encrypt也是查表操作罢了。out如下(共120w行输出)：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">1.</span> Encrypt</span><br><span class="line"><span class="number">2.</span> Decrypt</span><br><span class="line"><span class="number">3.</span> Exit</span><br><span class="line">&gt; <span class="number">1</span></span><br><span class="line">Input the message to encrypt (<span class="keyword">in</span> <span class="built_in">hex</span>): 845E4551E164748C339242F4F0D387C0</span><br><span class="line">Result: 4AEDF15DD920135775274A797E8E94A4</span><br><span class="line">Encryption took <span class="number">5423.000000</span> ns</span><br><span class="line">&gt; <span class="number">1</span></span><br><span class="line">Input the message to encrypt (<span class="keyword">in</span> <span class="built_in">hex</span>): 8AEDB8A424E6B54F623335CD0791A202</span><br><span class="line">Result: A486AE81CC81622957840868EAC1D8EE</span><br><span class="line">Encryption took <span class="number">4026.000000</span> ns</span><br><span class="line">&gt; <span class="number">1</span></span><br><span class="line">Input the message to encrypt (<span class="keyword">in</span> <span class="built_in">hex</span>): 395A4A646AF2D2CB6F8D6F52408D4376</span><br><span class="line">Result: 818E6A5071FB8BE8D2EE113E6F9FF4BB</span><br><span class="line">Encryption took <span class="number">3681.000000</span> ns</span><br><span class="line">&gt; <span class="number">2</span></span><br><span class="line">Input the message to decrypt (<span class="keyword">in</span> <span class="built_in">hex</span>): AE3CE1EFE517D36569961249192C84B1</span><br><span class="line">Result: A668A522391B0454AED0FEDAA67283F5</span><br><span class="line">Decryption took <span class="number">48345.00</span> ns</span><br><span class="line">&gt; <span class="number">1</span></span><br><span class="line">Input the message to encrypt (<span class="keyword">in</span> <span class="built_in">hex</span>): 5A0C8C00EC51E36E11C8B538D2BBA952</span><br><span class="line">Result: 4C574A1CB561BAF9758B9BC6BF3849CD</span><br><span class="line">Encryption took <span class="number">3245.000000</span> ns</span><br><span class="line">....</span><br></pre></td></tr></table></figure>
+
+<h3 id="Analysis-1"><a href="#Analysis-1" class="headerlink" title="Analysis"></a>Analysis</h3><p>这道题的漏洞其实一眼就能看出来 - 就在<code>doSboxInv</code> 🔍 函数的实现上。这个函数用了最朴素的线性查找来实现S盒的逆操作，每次都要在256个值里一个一个找，直到找到匹配的值才返回。这种实现方式导致函数的执行时间会和目标值在数组中的位置直接相关。想想看，在AES解密的过程中，每一轮都要调用这个<code>subBytesInv</code>函数，而这个函数内部又会对每个字节调用<code>doSboxInv</code> ⏱️。由于是10轮操作，时间差异会被放大。这就给了我们一个绝佳的时间侧信道攻击机会 💥。</p>
+<p>基于这个想法，笔者这样设计了这样的一个区分攻击：如果固定密文的某个字节（比如第一个字节），其他字节随机，那么根据概率论的知识 🎲，其他字节对解密时间的影响在取平均后期望趋近于0。这样观察到的时间差异主要就来自于我们控制的那个字节了。更进一步，如果能够猜测最后一轮的轮密钥 🔑，当猜测正确时，解密过程中的S盒查找会出现一个特殊的模式，这个模式会导致解密时间出现显著的异常⚠️。而当猜测错误时，由于输入是随机的，时间分布会相对均匀。</p>
+<p>基于这个思路 💡，对每个可能的轮密钥值都进行测试，记录解密时间并进行统计分析。笔者的做法是给每次查询的时间和查询次数都赋予一定的权重⚖️，然后求和得到一个最终的评分。当某个猜测值的评分明显高于其他值时，这个值很可能就是正确的轮密钥。通过该方法，笔者成功求解出这道题目。一个简单的优化就是预先计算好逆S盒表，这样就能用O(1)的时间完成查找，避免时间侧信道攻击。</p>
+
+    </div>
+
+    
+    <div class="about">
+        <h1>About this Post</h1>
+        <div class="details">
+            <p>This post is written by Hao Jiang, licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc/4.0">CC BY-NC 4.0</a>.</p>
+        </div>
+        
+        <p class="tags">
+            
+            <i class="icon"></i>
+            <a href="/tags/ctf/" class="tag">#ctf</a><a href="/tags/cryptography/" class="tag">#cryptography</a><a href="/tags/TimingAttack/" class="tag">#TimingAttack</a><a href="/tags/CSIDH/" class="tag">#CSIDH</a><a href="/tags/AES/" class="tag">#AES</a>
+        </p>
+        
+    </div>
+    
+
+    <div class="container post-prev-next">
+        <a class="next"></a>
+        
+        <a href="/2024Summary/" class="prev">
+            <div>
+                <div class="text">
+                    <p class="label">Previous</p>
+                    <h3 class="title">2024 Summary</>
+                </div>
+            </div>
+        </a>
+        
+    </div>
+
+    
+        
+        
+    
+</article>
+
+        <footer>
+    <div class="inner">
+        <div class="links">
+            
+            <div class="group">
+                <h2 class="title">Blog</h2>
+                
+                <a href="/" class="item">Blog</a>
+                
+                <a href="/archives" class="item">Archives</a>
+                
+                <a href="/tags" class="item">Tags</a>
+                
+                <a href="/categories" class="item">Categories</a>
+                
+                <a href="/search" class="item">Search</a>
+                
+                <a href="/friends" class="item">Friends</a>
+                
+                <a href="/something" class="item">Something</a>
+                
+                <a href="/about" class="item">About</a>
+                
+            </div>
+            
+            <div class="group">
+                <h2 class="title">Me</h2>
+                
+                <a target="_blank" rel="noopener" href="https://github.com/D33BaT0" class="item">GitHub</a>
+                
+                <a target="_blank" rel="noopener" href="https://twitter.com/De3bato" class="item">Twitter</a>
+                
+                <a target="_blank" rel="noopener" href="https://space.bilibili.com/324843873" class="item">Bilibili</a>
+                
+                <a href="mailto:2546664446@qq.com" class="item">Email</a>
+                
+            </div>
+            
+        </div>
+        <span>&copy; 2025 Hao Jiang<br>Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> </span>
+        
+        <br>
+        <span class="footer-extra-description">Life is a struggle,but you can fight against it...</span>
+        
+        
+            <br>
+            <div class="color-scheme-toggle" role="radiogroup" id="theme-color-scheme-toggle">
+                <label>
+                    <input type="radio" value="light">
+                    <span>Light</span>
+                </label>
+                <label>
+                    <input type="radio" value="dark">
+                    <span>Dark</span>
+                </label>
+                <label>
+                    <input type="radio" value="auto">
+                    <span>Auto</span>
+                </label>
+            </div>
+        
+    </div>
+</footer>
+
+
+        
+<script src="/js/main.js"></script>
+
+        
+        
+        
+
+        
+        <script src="https://unpkg.com/scrollreveal"></script>
+        <script>
+            window.addEventListener('load', () => {
+                ScrollReveal({ delay: 250, reset: true, easing: 'cubic-bezier(0, 0, 0, 1)' })
+                ScrollReveal().reveal('.post-list-item .cover-img img')
+                ScrollReveal().reveal('.post-list-item, .card, .content p img, .content .block-large img', { distance: '60px', origin: 'bottom', duration: 800 })
+            })
+        </script>
+        
+    </body>
+</html>
